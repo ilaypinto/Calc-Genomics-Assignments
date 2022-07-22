@@ -1,0 +1,185 @@
+%% Main Script for Genomics HW 3%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear all; clc; close all;
+%% Q1
+disp('----------------Q1----------------')
+
+% Sections 1-3
+disp('Sections 1-3')
+disp('See Fig 1')
+
+[~,S] = fastaread('yeast_genes.fa.txt'); % Load yeast genes
+genes_length = cellfun(@length,S)/3;     % calc num of codons for each gene
+
+% I assumed that if theres a gene which is not exactly 3*n in length such
+% as 3*n+1(even though a true gene is suppose to be exactly 3*n), it
+% will be put in the same bin as 3*n, by the histogram
+
+figure;
+histogram(genes_length,FaceColor='r'); title('Yeast Gene Length Distribution');
+xlabel('No. codons'); ylabel('No. genes')
+
+% Section 4-6
+disp('Sections 4-6')
+
+my_700 = sum(genes_length>=700);        % calc num of genes >= 700
+
+P_ampiric = my_700/length(genes_length) % section 4 answer
+
+P_bin = binopdf(40,150,P_ampiric)       % section 5 answer
+
+P_hg = hygecdf(10,1000,my_700,150)      % section 6 answer
+
+%% Q2
+disp('----------------Q2----------------')
+
+% Section 1
+disp('Section 1')
+
+FPR = 0.3;           % Given Value
+Prevalence = 0.25;   % Given Value
+Sensitivity = 0.75   % Given Value
+Specificity = 1-FPR % FPR + specificity = 1
+
+% Section 2
+disp('Section 2')
+
+% Using equations for PV+ and PV-:
+
+PV_plus = Prevalence*Sensitivity/(Prevalence*Sensitivity+((1-Prevalence)*(1-Specificity)))
+PV_minus = (1-Prevalence)*Specificity/((1-Prevalence)*Specificity+((Prevalence)*(1-Sensitivity)))
+
+%% Q3
+disp('----------------Q3----------------')
+
+% Section 1
+disp('Section 1')
+
+disp('H0: Light bulb Lifespan(mean) = 1520 hours')
+disp('H1: Light bulb Lifespan(mean) < 1520 hours')
+
+% Section 2-3
+disp('Section 1')
+rng("default");  % For reproducibility
+
+sample_mean = mean(normrnd(1520,85,40,1))
+
+sample_vec = zeros(1000,1);
+for i = 1:1000
+    sample_vec(i) = mean(normrnd(1520,85,40,1));
+end
+
+my_observations = sum(sample_vec<=1505);
+P_ampiric = my_observations/1000
+
+disp(['P-value recieved is ',num2str(P_ampiric),','])
+disp('which is relativily big(even for testing 5% significance),')
+disp('therefore H0(Null hypothesis)cannot be rejected.')
+
+%% Q4 
+disp('----------------Q4----------------')
+
+% Sections 1-3
+disp('Sections 1-3')
+
+% See "Local Functions" in the end of this script to see
+% std_err Function, as required for this section
+disp("See Local Functions in the end of this script to see std_err Function, as required for this section")
+
+data = fopen('testdata1.txt'); % Load subject data
+subjects = textscan(data,'%f%f','HeaderLines',1,'Delimiter',',');
+fclose(data);
+
+mean_subj1 = mean(subjects{1,1}) % Calc mean for subject 1
+mean_subj2 = mean(subjects{1,2}) % Calc mean for subject 2
+std_err_subj1 = std_err(subjects{1,1}) % Calc std_err for subject 1
+std_err_subj2 = std_err(subjects{1,2}) % Calc std_err for subject 2
+
+%% Q5
+disp('----------------Q5----------------')
+
+data = load("gene_UTR5.mat"); % Load UTR5' Data
+data = data.gene_UTR5';
+couples = ["GG","GC","GA","GT","CC","CG","CA","CT","AA","AG","AC","AT","TT",...
+    "TG","TC","TA"];             % All couple nucleotides options
+Appearances = zeros(4319,16);    % appearances array of couples in original UTR5'
+Appearances_mean = zeros(1,16);  % mean appearances array of couples in original UTR5'
+Rand_UTR5 = cell(100,4319);      % shuffled UTR5'
+Rand_Appearances = zeros(100,16);% appearances array of couples in the shuffled UTR5'
+P_value_nt = zeros(1,16);        % P value array of couples in the original UTR5'
+
+% Section 1
+disp('Section 1')
+
+disp('H0: mean(Specific Nucleotide couple in UTR5) <= mean(Same Nucleotide couples in random UTR5)')
+disp('H1: mean(Specific Nucleotide couple in UTR5) > mean(Same Nucleotide couples in random UTR5)')
+
+% Section 2-7
+disp('Section 2-7')
+
+for i = 1:size(Rand_UTR5,1)           % compute random UTR5'
+    for j = 1:size(Rand_UTR5,2)
+        Rand_UTR5{i,j} = data{j}(randperm(length(data{j})));
+    end
+end
+
+disp("section 2: Shuffled UTR5' were computed! see 'Rand_UTR5' in workspace")
+
+for i = 1:size(data,2)                % compute number of appearances of couples
+     for k = 1:length(couples)
+         temp = length(strfind(data{i},couples(1,k)));
+         Appearances(i,k) = Appearances(i,k) + temp;   % sum the appearances
+     end
+end
+
+disp("section 3: Appearances of couples in original UTR5' were computed! see 'Appearances' in workspace")
+
+for i = 1:length(data)                % compute number of appearances of couples
+    for k = 1:length(couples)
+        temp = length(strfind(data{1,i},couples(1,k)));
+        Appearances_mean(1,k) = Appearances_mean(1,k) + temp;   % sum the appearances
+    end
+end
+
+Appearances_mean = Appearances_mean/length(data);     % divide by num of UTRs to
+                                                      % compute the mean of
+                                                      % appearances
+
+disp("section 4: Means of couples in original UTR5' were computed! see 'Appearances_mean' in workspace")
+
+for i = 1:size(Rand_UTR5,2)                % compute number of appearances of couples
+    for j = 1:size(Rand_UTR5,1)
+        for k = 1:length(couples)
+            temp = length(strfind(Rand_UTR5{j,i},couples(1,k)));
+            Rand_Appearances(j,k) = Rand_Appearances(j,k) + temp;   % sum the appearances
+        end
+    end
+end
+
+Rand_Appearances = Rand_Appearances/length(data);     % divide by num of UTRs to
+                                                      % compute the mean of
+                                                      % appearances
+
+disp("Section 5: Means of couples in shuffled UTR5' were computed! see 'Rand_Appearances' in workspace")
+
+for i = 1:size(Appearances_mean,2)
+    P_value_nt(i) = sum(Appearances_mean(i)<Rand_Appearances(:,i))/100;
+end
+
+disp("section 6: P-values were computed! see 'P_value_nt' in workspace")
+
+significant_couples = (char(couples(P_value_nt<0.05))); % Couples with P-val under 0.05
+
+disp(['section 7: The couples:',significant_couples(:,:,1),',',significant_couples(:,:,2),',',significant_couples(:,:,3),',',significant_couples(:,:,4),',',significant_couples(:,:,5),',',significant_couples(:,:,6),','])
+disp('were found significant, as P-value was smaller than 0.05')
+
+%% Local Functions
+function sol = std_err(data)
+sol = std(data)/sqrt(length(data));
+end
+
+
+
+
+
+
